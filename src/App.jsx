@@ -22,6 +22,11 @@ export default function App() {
   const [editTitle, setEditTitle] = useState("");
   const [editPriority, setEditPriority] = useState("medium");
 
+  // Search & Filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // "all", "pending", "done"
+  const [priorityFilter, setPriorityFilter] = useState("all"); // "all", "high", "medium", "low"
+
   useEffect(() => {
     if (token) {
       fetchTasks();
@@ -223,6 +228,22 @@ export default function App() {
   const completedCount = tasks.filter((t) => t.completed).length;
   const pendingCount = tasks.length - completedCount;
 
+  const filteredTasks = tasks.filter((task) => {
+    const matchesSearch = task.title
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "pending" && !task.completed) ||
+      (statusFilter === "done" && task.completed);
+
+    const matchesPriority =
+      priorityFilter === "all" || (task.priority || "medium") === priorityFilter;
+
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
+
   // Tasks Dashboard
   return (
     <div className="card">
@@ -271,14 +292,54 @@ export default function App() {
         </button>
       </form>
 
+      {/* Search & Filter Bar */}
+      <div className="filters-bar">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search tasks..."
+        />
+
+        <div className="filter-controls">
+          <div className="status-pills">
+            {["all", "pending", "done"].map((status) => (
+              <button
+                key={status}
+                type="button"
+                className={`filter-pill ${statusFilter === status ? "active" : ""}`}
+                onClick={() => setStatusFilter(status)}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          <select
+            className="priority-filter"
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+          >
+            <option value="all">All Priorities</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+      </div>
+
       {/* Task List */}
       {tasks.length === 0 ? (
         <div className="empty-state">
           <p>No tasks yet. Add your first task above!</p>
         </div>
+      ) : filteredTasks.length === 0 ? (
+        <div className="empty-state">
+          <p>No tasks match your search or filter.</p>
+        </div>
       ) : (
         <ul className="task-list">
-          {tasks.map((task) => (
+          {filteredTasks.map((task) => (
             <li key={task._id} className="task-item">
               {editingId === task._id ? (
                 <div className="edit-row">
